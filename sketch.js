@@ -7,8 +7,9 @@ let textToPrint;
 // P5.js framework functions
 
 function setup() {
-  simulation = new Simulation(800, 600);
-  simulation.setup();
+  width = 800;
+  height = 600;
+  simulation = new Simulation();
   createCanvas(simulation.width, simulation.height);
 
   // GUI
@@ -32,17 +33,19 @@ function setup() {
     .style('padding', '10px')
     .mousePressed(exportButtonIsPressed);
 
-  inputbtn = createFileInput(importButtonIsPressed)
+  createFileInput(importButtonIsPressed)
     .style('font-size', '14px')
     .style('padding', '8px');
 }
 
 function draw() {
   textToPrint = '';
+  background(150, 150, 150);
   //
   simulation.update();
   simulation.display();
   //
+  noStroke();
   fill(0);
   textSize(10);
   text(textToPrint, 10, 10);
@@ -89,15 +92,21 @@ class Simulation {
   static generateEntities() {
     let es = [];
     for (let i = 0; i < 10; i++) {
-      es.push(new Entity(random(width), random(height)));
+      es.push(new Red(random(width), random(height)));
+    }
+    for (let i = 0; i < 10; i++) {
+      es.push(new Blue(random(width), random(height)));
+    }
+    for (let i = 0; i < 10; i++) {
+      es.push(new Green(random(width), random(height)));
     }
     return es;
   }
 
-  constructor(simulationWidth, simulationHeight, entities) {
+  constructor(entities) {
     // Map data
-    this.width = simulationWidth;
-    this.height = simulationHeight;
+    this.width = width;
+    this.height = height;
     // TODO: add map obstacles
     // Time
     this.isRunning = false;
@@ -106,7 +115,7 @@ class Simulation {
     this.entities =
       entities && Array.isArray(entities) && entities.length > 0
         ? entities
-        : Simulation.generateEntities();
+        : Simulation.generateEntities(this.width, this.height);
   }
 
   update() {
@@ -114,14 +123,13 @@ class Simulation {
     for (let e of this.entities) {
       e.update();
     }
-    printLine(`Pause: ${this.isRunning}`);
   }
 
   display() {
-    if (!this.isRunning) return;
     for (let e of this.entities) {
       e.display();
     }
+    printLine(`Is Running: ${this.isRunning}`);
   }
 
   switchPause() {
@@ -141,6 +149,7 @@ class Entity {
     this.y = typeof y === 'number' ? constrain(y, 0, height) : random(height);
     this.vX = typeof velocityX === 'number' ? velocityX : random(-2, 2);
     this.vY = typeof velocityY === 'number' ? velocityY : random(-2, 2);
+    this.color = color(255, 255, 255);
   }
 
   update() {
@@ -160,7 +169,7 @@ class Entity {
   }
 
   display() {
-    stroke(255, 255, 255);
+    stroke(this.color);
     strokeWeight(5);
     point(this.x, this.y);
   }
@@ -172,31 +181,26 @@ class Entity {
 
 //- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- -//
 
-class Organism extends Entity {
+class Red extends Entity {
   constructor(...args) {
     super(...args);
-    // TODO: adding life characteristics (health ecc)
+    this.id = 'RED';
+    this.color = color(255, 0, 0);
   }
 }
 
-// Functions to control the simulation
-function pauseSimulation() {
-  if (isRunning) {
-    // sta andando e lo sto bloccando
-    startPause = millis();
-    pauseLength = 0;
-    isRunning = false;
-  } else {
-    // è in pausa e lo sto avviando
-    pauseLength = millis() - startPause;
-    isRunning = true;
+class Blue extends Entity {
+  constructor(...args) {
+    super(...args);
+    this.id = 'BLUE';
+    this.color = color(0, 0, 255);
   }
 }
 
-function speedUpSimulation() {
-  simulationSpeed *= 2;
-}
-
-function slowDownSimulation() {
-  simulationSpeed /= 2;
+class Green extends Entity {
+  constructor(...args) {
+    super(...args);
+    this.id = 'GREEN';
+    this.color = color(0, 255, 0);
+  }
 }
