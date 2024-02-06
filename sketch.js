@@ -1,141 +1,136 @@
-// Simulation
-let simulationTime = 0;
-let simulationSpeed = 1;
-let isRunning = false;
-let startPause = 0;
-let pauseLength = 0;
-let organisms = [];
+'use strict';
 
 // Globals
+let simulation;
+let textToPrint;
 
 // P5.js framework functions
 
 function setup() {
-  const simulation = new Simulation(800, 600);
-
+  simulation = new Simulation(800, 600);
+  simulation.setup();
   createCanvas(simulation.width, simulation.height);
 
-  // Add buttons to control the simulation
+  // GUI
   createButton('Pause/Resume')
     .style('font-size', '16px')
     .style('padding', '10px')
-    .mousePressed(pauseSimulation);
+    .mousePressed(pauseButtonIsPressed);
 
-  // createButton('Speed Up')
-  //   .style('font-size', '16px')
-  //   .style('padding', '10px')
-  //   .mousePressed(speedUpSimulation);
+  createButton('Speed Up')
+    .style('font-size', '16px')
+    .style('padding', '10px')
+    .mousePressed(speedUpButtonIsPressed);
 
-  // createButton('Slow Down')
-  //   .style('font-size', '16px')
-  //   .style('padding', '10px')
-  //   .mousePressed(slowDownSimulation);
+  createButton('Slow Down')
+    .style('font-size', '16px')
+    .style('padding', '10px')
+    .mousePressed(slowDownButtonIsPressed);
 
   createButton('Export')
     .style('font-size', '16px')
     .style('padding', '10px')
-    .mousePressed(exportOrganisms);
+    .mousePressed(exportButtonIsPressed);
 
-  // Create file input button for importing organism positions
-  inputbtn = createFileInput(handleFile)
+  inputbtn = createFileInput(importButtonIsPressed)
     .style('font-size', '14px')
     .style('padding', '8px');
 }
 
 function draw() {
-  background(220);
-
-  // Calculate elapsed time regardless of visualization speed
-  let deltaTime = isRunning ? millis() * simulationSpeed : 0;
-
-  // Update and display each organism with the calculated time
-  for (let organism of organisms) {
-    organism.tick();
-    organism.display();
-  }
-
-  displayisRunning();
-
-  // Display the simulation speed value
-  displaySimulationSpeed();
+  textToPrint = '';
+  //
+  simulation.update();
+  simulation.display();
+  //
+  fill(0);
+  textSize(10);
+  text(textToPrint, 10, 10);
 }
+
+//- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- -//
 
 // Handlers
 
-function pauseResumeButtonIsPressed() {}
-// function speedUpButtonIsPressed() {}
-// function speedDownButtonIsPressed() {}
-function ExportButtonIsPressed() {}
-function ImportButtonIsPressed() {}
-
-//
-
-function displayisRunning() {
-  fill(0);
-  textSize(16);
-  text(`pauseLength: ${pauseLength}`, 20, height - 100);
-  if (!isRunning) text(`Paused`, 20, height - 40);
+function printLine(text) {
+  textToPrint = textToPrint ? `${textToPrint}\n${text}` : text;
 }
 
-function displaySimulationSpeed() {
-  fill(0);
-  textSize(16);
-  text(`Simulation Speed: ${nf(simulationSpeed, 1, 2)}`, 20, height - 20);
-  text(`mills: ${millis()}`, 20, height - 80);
+function pauseButtonIsPressed() {
+  simulation.switchPause();
+}
+function speedUpButtonIsPressed() {
+  simulation.changeTime(+0.1);
 }
 
-function exportOrganisms() {
-  // Create an array of strings containing organism positions
-  let organismPositions = organisms.map((organism) => organism.toString());
-
-  // Save the strings to a text file
-  saveStrings(organismPositions, 'organism_positions.txt');
+function slowDownButtonIsPressed() {
+  simulation.changeTime(-0.1);
 }
 
-function handleFile(file) {
-  // Split the file data into lines
-  data = split(file.data, '\n');
+function exportButtonIsPressed() {
+  // TODO
+}
 
-  // Restore organism positions based on the loaded strings
-  organisms = data
-    .filter((line) => line.trim() !== '') // Exclude empty lines
-    .map((line) => {
-      let values = split(line, ',');
-
-      return new Organism(
-        float(values[0]),
-        float(values[1]),
-        float(values[2]),
-        float(values[3])
-      );
-    })
-    .filter((org) => org !== undefined); // Exclude undefined values
-
-  inputbtn.value('');
+function importButtonIsPressed(file) {
+  // TODO
 }
 
 //- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- -//
 
 class Simulation {
-  static generateOrganisms() {
-    let orgs = [];
-    for (let i = 0; i < 50; i++) {
-      orgs.push(new Organism(random(width), random(height)));
-    }
-    return orgs;
+  static export() {
+    // TODO
   }
 
-  constructor(simulationWidth, simulationHeight, organisms) {
+  static import() {
+    // TODO
+  }
+
+  static generateEntities() {
+    let es = [];
+    for (let i = 0; i < 10; i++) {
+      es.push(new Entity(random(width), random(height)));
+    }
+    return es;
+  }
+
+  constructor(simulationWidth, simulationHeight, entities) {
     // Map data
     this.width = simulationWidth;
     this.height = simulationHeight;
     // TODO: add map obstacles
-    // Entities data
-    this.organisms =
-      organisms && Array.isArray(organisms) && organisms.length > 0
-        ? organisms
-        : Simulation.generateOrganisms();
+    // Time
+    this.isRunning = false;
+    this.timeMillis = 0;
+    // Entities
+    this.entities =
+      entities && Array.isArray(entities) && entities.length > 0
+        ? entities
+        : Simulation.generateEntities();
   }
+
+  update() {
+    if (!this.isRunning) return;
+    for (let e of this.entities) {
+      e.update();
+    }
+    printLine(`Pause: ${this.isRunning}`);
+  }
+
+  display() {
+    if (!this.isRunning) return;
+    for (let e of this.entities) {
+      e.display();
+    }
+  }
+
+  switchPause() {
+    this.isRunning = !this.isRunning;
+  }
+
+  changeTime(deltaTime) {}
+
+  export() {}
 }
 
 //- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- -//
@@ -144,53 +139,34 @@ class Entity {
   constructor(x, y, velocityX, velocityY) {
     this.x = typeof x === 'number' ? constrain(x, 0, width) : random(width);
     this.y = typeof y === 'number' ? constrain(y, 0, height) : random(height);
-    this.velocityX = typeof velocityX === 'number' ? velocityX : random(-2, 2);
-    this.velocityY = typeof velocityY === 'number' ? velocityY : random(-2, 2);
-
-    this.lastUpdateTime = millis();
+    this.vX = typeof velocityX === 'number' ? velocityX : random(-2, 2);
+    this.vY = typeof velocityY === 'number' ? velocityY : random(-2, 2);
   }
 
-  tick() {
-    if (!isRunning) return;
-
-    // Calcola il tempo trascorso dall'ultimo aggiornamento
-    let currentTime = millis();
-    let deltaTime = (currentTime - this.lastUpdateTime) * 0.001;
-
-    // Implementa la logica di aggiornamento degli organismi qui
-    this.update(deltaTime);
-
-    // Aggiorna il tempo dell'ultimo aggiornamento
-    this.lastUpdateTime = currentTime;
-  }
-
-  update(deltaTime) {
-    // Implementa la logica per la collisione ai bordi del canvas
-    const radius = 10; // Raggio dell'organismo (metà del diametro)
-
-    // Verifica la collisione con i bordi orizzontali
-    if (this.x - radius < 0 || this.x + radius > width) {
-      this.velocityX *= -1; // Inverti la direzione orizzontale
+  update() {
+    // Out of borders
+    if ((this.x <= 0 && this.vX < 0) || (this.x >= width && this.vX > 0)) {
+      this.vX *= -1;
+    } else if (
+      (this.y <= 0 && this.vY < 0) ||
+      (this.y >= height && this.vY > 0)
+    ) {
+      this.vY *= -1;
     }
 
-    // Verifica la collisione con i bordi verticali
-    if (this.y - radius < 0 || this.y + radius > height) {
-      this.velocityY *= -1; // Inverti la direzione verticale
-    }
-
-    // Aggiorna la posizione basata sulla velocità
-    this.x += this.velocityX * deltaTime;
-    this.y += this.velocityY * deltaTime;
+    //
+    this.x += this.vX;
+    this.y += this.vY;
   }
 
   display() {
-    // Draw the organism on the canvas
-    fill(0, 255, 0);
-    ellipse(this.x, this.y, 20, 20);
+    stroke(255, 255, 255);
+    strokeWeight(5);
+    point(this.x, this.y);
   }
 
   toString() {
-    return `${this.x},${this.y},${this.velocityX},${this.velocityY}`;
+    // TODO
   }
 }
 
