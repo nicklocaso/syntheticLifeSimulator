@@ -18,37 +18,37 @@ function setup() {
     .style('padding', '10px')
     .mousePressed(pauseButtonIsPressed);
 
-  createButton('Speed Up')
-    .style('font-size', '16px')
-    .style('padding', '10px')
-    .mousePressed(speedUpButtonIsPressed);
+  // createButton('Speed Up')
+  //   .style('font-size', '16px')
+  //   .style('padding', '10px')
+  //   .mousePressed(speedUpButtonIsPressed);
 
-  createButton('Slow Down')
-    .style('font-size', '16px')
-    .style('padding', '10px')
-    .mousePressed(slowDownButtonIsPressed);
+  // createButton('Slow Down')
+  //   .style('font-size', '16px')
+  //   .style('padding', '10px')
+  //   .mousePressed(slowDownButtonIsPressed);
 
-  createButton('Export')
-    .style('font-size', '16px')
-    .style('padding', '10px')
-    .mousePressed(exportButtonIsPressed);
+  // createButton('Export')
+  //   .style('font-size', '16px')
+  //   .style('padding', '10px')
+  //   .mousePressed(exportButtonIsPressed);
 
-  createFileInput(importButtonIsPressed)
-    .style('font-size', '14px')
-    .style('padding', '8px');
+  // createFileInput(importButtonIsPressed)
+  //   .style('font-size', '14px')
+  //   .style('padding', '8px');
 }
 
 function draw() {
   textToPrint = '';
-  background(150, 150, 150);
+  background(243, 156, 18);
   //
   simulation.update();
   simulation.display();
   //
   noStroke();
   fill(0);
-  textSize(10);
-  text(textToPrint, 10, 10);
+  textSize(15);
+  text(textToPrint, 5, 15);
 }
 
 //- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- -//
@@ -90,28 +90,18 @@ class Simulation {
   }
 
   static generateEntities() {
-    let es = [];
-    for (let i = 0; i < 100; i++) {
-      es.push(new Red(random(width), random(height)));
+    let life = [];
+    // Only for testing purpose
+    for (let i = 0; i < 50; i++) {
+      life.push(new Particle({}));
     }
-    for (let i = 0; i < 100; i++) {
-      es.push(new Green(random(width), random(height)));
-    }
-    for (let i = 0; i < 100; i++) {
-      es.push(new Blue(random(width), random(height)));
-    }
-    for (let i = 0; i < 100; i++) {
-      es.push(new White(random(width), random(height)));
-    }
-
-    return es;
+    return life;
   }
 
   constructor(entities) {
     // Map data
     this.width = width;
     this.height = height;
-    // TODO: add map obstacles
     // Time
     this.isRunning = false;
     this.timeMillis = 0;
@@ -127,13 +117,18 @@ class Simulation {
     for (let e of this.entities) {
       e.update();
     }
+    for (let e of this.entities) {
+      e.updateValues();
+    }
+
+    this.entities = this.entities.filter((e) => e.stroke > 0);
   }
 
   display() {
     for (let e of this.entities) {
       e.display();
     }
-    printLine(`Is Running: ${this.isRunning}`);
+    printLine(`Running: ${this.isRunning}`);
   }
 
   switchPause() {
@@ -148,23 +143,88 @@ class Simulation {
 //- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- -//
 
 class Entity {
-  constructor(x, y, velocityX, velocityY) {
+  constructor() {}
+  update() {}
+  updateValues() {}
+  display() {}
+}
+
+class Particle extends Entity {
+  static mapValue(input) {
+    input = constrain(input, 0, 1);
+    let output = map(1 - input, 0, 1, 0, 255);
+    return round(output);
+  }
+
+  constructor({ x, y, velocityX, velocityY, density, stroke } = {}) {
+    super();
     this.x = typeof x === 'number' ? constrain(x, 0, width) : random(width);
     this.y = typeof y === 'number' ? constrain(y, 0, height) : random(height);
     this.vX = typeof velocityX === 'number' ? velocityX : 0;
     this.vY = typeof velocityY === 'number' ? velocityY : 0;
-    this.color = color(255, 255, 255);
 
-    this.stroke = random(5, 10);
+    this.density = typeof density === 'number' ? density : random(1);
+    this.stroke = typeof stroke === 'number' ? stroke : random(5, 10);
+
+    this.color = color(Particle.mapValue(this.density));
+
+    this.deltaStroke = 0;
+  }
+
+  interact(other) {
+    let G = 1;
+
+    let dx = other.x - this.x;
+    let dy = other.y - this.y;
+    let distance = Math.sqrt(dx * dx + dy * dy);
+
+    if (distance > 0) {
+      let force = (G * this.stroke * other.stroke) / (distance * distance); // F = (G * m1 * m2) / d^2
+      let fx = (force * dx) / distance;
+      let fy = (force * dy) / distance;
+
+      this.vX += fx;
+      this.vY += fy;
+
+      const R1 = this.stroke / 2;
+      const R2 = other.stroke / 2;
+
+      if (distance < R1 + R2) {
+        let alpha =
+          Math.acos(
+            (R1 * R1 + distance * distance - R2 * R2) / (2 * R1 * distance)
+          ) * 2;
+        let beta =
+          Math.acos(
+            (R2 * R2 + distance * distance - R1 * R1) / (2 * R2 * distance)
+          ) * 2;
+        let a1 = 0.5 * beta * R2 * R2 - 0.5 * R2 * R2 * Math.sin(beta);
+        let a2 = 0.5 * alpha * R1 * R1 - 0.5 * R1 * R1 * Math.sin(alpha);
+
+        const newArea = Math.PI * Math.pow(R1, 2) + Math.floor(a1 + a2);
+
+        if (R1 > R2) {
+          this.deltaStroke += Math.sqrt(newArea / Math.PI) * 2;
+        } else {
+          this.deltaStroke -= Math.sqrt(newArea / Math.PI) * 2;
+        }
+      }
+    }
   }
 
   update() {
     // Interactions
+    stroke;
     for (let other of simulation.entities) {
       if (other !== this) {
         this.interact(other);
       }
     }
+  }
+
+  updateValues() {
+    this.stroke += this.deltaStroke;
+    this.deltaStroke = 0;
 
     // Out of borders
     if ((this.x <= 0 && this.vX < 0) || (this.x >= width && this.vX > 0)) {
@@ -177,8 +237,8 @@ class Entity {
     }
 
     //
-    this.vX *= 0.95;
-    this.vY *= 0.95;
+    this.vX *= 0.99;
+    this.vY *= 0.99;
 
     //
     this.x += this.vX;
@@ -189,229 +249,5 @@ class Entity {
     stroke(this.color);
     strokeWeight(this.stroke);
     point(this.x, this.y);
-  }
-
-  interact(other) {}
-
-  toString() {
-    // TODO
-  }
-}
-
-//- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- -//
-
-class Red extends Entity {
-  constructor(...args) {
-    super(...args);
-    this.id = 'RED';
-    this.color = color(255, 0, 0);
-  }
-
-  interact(other) {
-    let G = 0;
-
-    switch (other.id) {
-      case 'RED':
-        G = 1;
-        break;
-
-      case 'GREEN':
-        G = 0;
-        break;
-
-      case 'BLUE':
-        G = -1;
-        break;
-
-      default:
-        break;
-    }
-
-    let dx = other.x - this.x;
-    let dy = other.y - this.y;
-    let distance = Math.sqrt(dx * dx + dy * dy);
-
-    if (distance > 0) {
-      let force = (G * this.stroke * other.stroke) / (distance * distance); // F = (G * m1 * m2) / d^2
-      let fx = (force * dx) / distance;
-      let fy = (force * dy) / distance;
-
-      this.vX += fx;
-      this.vY += fy;
-
-      const minDistance = this.stroke / 1.5 + other.stroke / 1.5;
-      if (distance < minDistance) {
-        let nx = dx / distance;
-        let ny = dy / distance;
-
-        let overlap = minDistance - distance;
-
-        this.x -= overlap * nx;
-        this.y -= overlap * ny;
-      }
-    }
-  }
-}
-
-class Green extends Entity {
-  constructor(...args) {
-    super(...args);
-    this.id = 'GREEN';
-    this.color = color(0, 255, 0);
-  }
-
-  interact(other) {
-    let G = 0;
-
-    switch (other.id) {
-      case 'RED':
-        G = -0.2;
-        break;
-
-      case 'GREEN':
-        G = 0.5;
-        break;
-
-      case 'BLUE':
-        G = 0;
-        break;
-
-      default:
-        break;
-    }
-
-    let dx = other.x - this.x;
-    let dy = other.y - this.y;
-    let distance = Math.sqrt(dx * dx + dy * dy);
-
-    if (distance > 0) {
-      let force = (G * this.stroke * other.stroke) / (distance * distance); // F = (G * m1 * m2) / d^2
-      let fx = (force * dx) / distance;
-      let fy = (force * dy) / distance;
-
-      this.vX += fx;
-      this.vY += fy;
-
-      const minDistance = this.stroke / 1.5 + other.stroke / 1.5;
-      if (distance < minDistance) {
-        let nx = dx / distance;
-        let ny = dy / distance;
-
-        let overlap = minDistance - distance;
-
-        this.x -= overlap * nx;
-        this.y -= overlap * ny;
-      }
-    }
-  }
-}
-
-class Blue extends Entity {
-  constructor(...args) {
-    super(...args);
-    this.id = 'BLUE';
-    this.color = color(0, 0, 255);
-  }
-
-  interact(other) {
-    let G = 0;
-
-    switch (other.id) {
-      case 'RED':
-        G = 0;
-        break;
-
-      case 'GREEN':
-        G = 0;
-        break;
-
-      case 'BLUE':
-        G = 1;
-        break;
-
-      default:
-        break;
-    }
-
-    let dx = other.x - this.x;
-    let dy = other.y - this.y;
-    let distance = Math.sqrt(dx * dx + dy * dy);
-
-    if (distance > 0) {
-      let force = (G * this.stroke * other.stroke) / (distance * distance); // F = (G * m1 * m2) / d^2
-      let fx = (force * dx) / distance;
-      let fy = (force * dy) / distance;
-
-      this.vX += fx;
-      this.vY += fy;
-
-      const minDistance = this.stroke / 1.5 + other.stroke / 1.5;
-      if (distance < minDistance) {
-        let nx = dx / distance;
-        let ny = dy / distance;
-
-        let overlap = minDistance - distance;
-
-        this.x -= overlap * nx;
-        this.y -= overlap * ny;
-      }
-    }
-  }
-}
-
-class White extends Entity {
-  constructor(...args) {
-    super(...args);
-    this.id = 'WHITE';
-    this.color = color(255, 255, 255);
-  }
-
-  interact(other) {
-    let G = 0;
-
-    switch (other.id) {
-      case 'RED':
-        G = 1;
-        break;
-
-      case 'GREEN':
-        G = 0;
-        break;
-
-      case 'BLUE':
-        G = -1;
-        break;
-
-      case 'WHITE':
-        G = 1;
-        break;
-
-      default:
-        break;
-    }
-
-    let dx = other.x - this.x;
-    let dy = other.y - this.y;
-    let distance = Math.sqrt(dx * dx + dy * dy);
-
-    if (distance > 0) {
-      let force = (G * this.stroke * other.stroke) / (distance * distance); // F = (G * m1 * m2) / d^2
-      let fx = (force * dx) / distance;
-      let fy = (force * dy) / distance;
-
-      this.vX += fx;
-      this.vY += fy;
-
-      const minDistance = this.stroke / 1.5 + other.stroke / 1.5;
-      if (distance < minDistance) {
-        let nx = dx / distance;
-        let ny = dy / distance;
-
-        let overlap = minDistance - distance;
-
-        this.x -= overlap * nx;
-        this.y -= overlap * ny;
-      }
-    }
   }
 }
