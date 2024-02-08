@@ -80,6 +80,20 @@ function importButtonIsPressed(file) {
 
 //- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- -//
 
+function calculateAreaFromDiameter(diameter) {
+  const radius = diameter / 2;
+  const area = Math.PI * Math.pow(radius, 2);
+  return area;
+}
+
+function calculateDiameterFromArea(area) {
+  const radius = Math.sqrt(area / Math.PI);
+  const diameter = radius * 2;
+  return diameter;
+}
+
+//- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- -//
+
 class Simulation {
   static export() {
     // TODO
@@ -92,9 +106,11 @@ class Simulation {
   static generateEntities() {
     let life = [];
     // Only for testing purpose
-    for (let i = 0; i < 50; i++) {
+    for (let i = 0; i < 4; i++) {
       life.push(new Particle({}));
     }
+    // life.push(new Particle({ stroke: 5 }));
+    // life.push(new Particle({ stroke: 45 }));
     return life;
   }
 
@@ -165,62 +181,41 @@ class Particle extends Entity {
     this.vY = typeof velocityY === 'number' ? velocityY : 0;
 
     this.density = typeof density === 'number' ? density : random(1);
-    this.stroke = typeof stroke === 'number' ? stroke : random(5, 10);
+    this.stroke = typeof stroke === 'number' ? stroke : random(5, 35);
 
     this.color = color(Particle.mapValue(this.density));
 
-    this.deltaStroke = 0;
+    this.deltaArea = 0;
   }
 
   interact(other) {
-    let G = 0.1;
+    const G = 1;
+    const dx = other.x - this.x;
+    const dy = other.y - this.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
 
-    let dx = other.x - this.x;
-    let dy = other.y - this.y;
-    let distance = Math.sqrt(dx * dx + dy * dy);
+    const area = calculateAreaFromDiameter(this.stroke);
+    const radius = this.stroke / 2;
+
+    const otherArea = calculateAreaFromDiameter(other.stroke);
+    const otherRadius = other.stroke / 2;
 
     if (distance > 0) {
-      let force = (G * other.stroke) / (distance * distance); // F = (G * m1 * m2) / d^2
+      let force = (G * otherArea) / (distance * distance); // F = (G * m1 * m2) / d^2
       let fx = (force * dx) / distance;
       let fy = (force * dy) / distance;
 
       this.vX += fx;
       this.vY += fy;
 
-      const R1 = this.stroke / 2;
-      const R2 = other.stroke / 2;
-
-      if (distance < R1 + R2) {
-        // let alpha =
-        //   Math.acos(
-        //     (R1 * R1 + distance * distance - R2 * R2) / (2 * R1 * distance)
-        //   ) * 2;
-        // let beta =
-        //   Math.acos(
-        //     (R2 * R2 + distance * distance - R1 * R1) / (2 * R2 * distance)
-        //   ) * 2;
-        // let a1 = 0.5 * beta * R2 * R2 - 0.5 * R2 * R2 * Math.sin(beta);
-        // let a2 = 0.5 * alpha * R1 * R1 - 0.5 * R1 * R1 * Math.sin(alpha);
-        // const newArea = Math.PI * Math.pow(R1, 2) + Math.floor(a1 + a2);
-
-        const result = combinedRadius(R1, R2);
-
-        if (R1 > R2) {
-          this.deltaStroke += result * 2;
+      if (distance < radius + otherRadius) {
+        // Collision
+        if (this.stroke > other.stroke) {
+          this.deltaArea += otherArea;
         } else {
-          this.deltaStroke -= result * 2;
+          this.deltaArea -= otherArea;
         }
       }
-    }
-
-    function combinedRadius(radius1, radius2) {
-      const area1 = Math.PI * Math.pow(radius1, 2);
-      const area2 = Math.PI * Math.pow(radius2, 2);
-
-      const combinedArea = area1 + area2;
-      const combinedRadius = Math.sqrt(combinedArea / Math.PI);
-
-      return combinedRadius;
     }
   }
 
@@ -234,9 +229,11 @@ class Particle extends Entity {
   }
 
   updateValues() {
-    if (this.deltaStroke) {
-      this.stroke = this.deltaStroke;
-      this.deltaStroke = 0;
+    //
+    if (this.deltaArea) {
+      const area = calculateAreaFromDiameter(this.stroke) + this.deltaArea;
+      this.stroke = calculateDiameterFromArea(area);
+      this.deltaArea = 0;
     }
 
     // Out of borders
