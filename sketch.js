@@ -122,6 +122,7 @@ class Simulation {
     }
 
     this.entities = this.entities.filter((e) => e.stroke > 0);
+    printLine(`entities: ${this.entities.length}`);
   }
 
   display() {
@@ -172,14 +173,14 @@ class Particle extends Entity {
   }
 
   interact(other) {
-    let G = 1;
+    let G = 0.1;
 
     let dx = other.x - this.x;
     let dy = other.y - this.y;
     let distance = Math.sqrt(dx * dx + dy * dy);
 
     if (distance > 0) {
-      let force = (G * this.stroke * other.stroke) / (distance * distance); // F = (G * m1 * m2) / d^2
+      let force = (G * other.stroke) / (distance * distance); // F = (G * m1 * m2) / d^2
       let fx = (force * dx) / distance;
       let fy = (force * dy) / distance;
 
@@ -190,31 +191,41 @@ class Particle extends Entity {
       const R2 = other.stroke / 2;
 
       if (distance < R1 + R2) {
-        let alpha =
-          Math.acos(
-            (R1 * R1 + distance * distance - R2 * R2) / (2 * R1 * distance)
-          ) * 2;
-        let beta =
-          Math.acos(
-            (R2 * R2 + distance * distance - R1 * R1) / (2 * R2 * distance)
-          ) * 2;
-        let a1 = 0.5 * beta * R2 * R2 - 0.5 * R2 * R2 * Math.sin(beta);
-        let a2 = 0.5 * alpha * R1 * R1 - 0.5 * R1 * R1 * Math.sin(alpha);
+        // let alpha =
+        //   Math.acos(
+        //     (R1 * R1 + distance * distance - R2 * R2) / (2 * R1 * distance)
+        //   ) * 2;
+        // let beta =
+        //   Math.acos(
+        //     (R2 * R2 + distance * distance - R1 * R1) / (2 * R2 * distance)
+        //   ) * 2;
+        // let a1 = 0.5 * beta * R2 * R2 - 0.5 * R2 * R2 * Math.sin(beta);
+        // let a2 = 0.5 * alpha * R1 * R1 - 0.5 * R1 * R1 * Math.sin(alpha);
+        // const newArea = Math.PI * Math.pow(R1, 2) + Math.floor(a1 + a2);
 
-        const newArea = Math.PI * Math.pow(R1, 2) + Math.floor(a1 + a2);
+        const result = combinedRadius(R1, R2);
 
         if (R1 > R2) {
-          this.deltaStroke += Math.sqrt(newArea / Math.PI) * 2;
+          this.deltaStroke += result * 2;
         } else {
-          this.deltaStroke -= Math.sqrt(newArea / Math.PI) * 2;
+          this.deltaStroke -= result * 2;
         }
       }
+    }
+
+    function combinedRadius(radius1, radius2) {
+      const area1 = Math.PI * Math.pow(radius1, 2);
+      const area2 = Math.PI * Math.pow(radius2, 2);
+
+      const combinedArea = area1 + area2;
+      const combinedRadius = Math.sqrt(combinedArea / Math.PI);
+
+      return combinedRadius;
     }
   }
 
   update() {
     // Interactions
-    stroke;
     for (let other of simulation.entities) {
       if (other !== this) {
         this.interact(other);
@@ -223,8 +234,10 @@ class Particle extends Entity {
   }
 
   updateValues() {
-    this.stroke += this.deltaStroke;
-    this.deltaStroke = 0;
+    if (this.deltaStroke) {
+      this.stroke = this.deltaStroke;
+      this.deltaStroke = 0;
+    }
 
     // Out of borders
     if ((this.x <= 0 && this.vX < 0) || (this.x >= width && this.vX > 0)) {
@@ -236,9 +249,20 @@ class Particle extends Entity {
       this.vY *= -1;
     }
 
+    if (this.x < 0) {
+      this.x = 0;
+    } else if (this.x > width) {
+      this.x = width;
+    }
+    if (this.y < 0) {
+      this.y = 0;
+    } else if (this.y > height) {
+      this.y = height;
+    }
+
     //
-    this.vX *= 0.99;
-    this.vY *= 0.99;
+    // this.vX *= 0.99;
+    // this.vY *= 0.99;
 
     //
     this.x += this.vX;
