@@ -4,6 +4,11 @@
 let simulation;
 let textToPrint;
 
+let camX = 0;
+let camY = 0;
+let zoom = 100;
+let zoomStep = 20;
+
 // P5.js framework functions
 
 function setup() {
@@ -51,6 +56,37 @@ function draw() {
   text(textToPrint, 5, 15);
 }
 
+function keyPressed() {
+  switch (key) {
+    case '+':
+      handlePlusKey();
+      break;
+
+    case '-':
+      handleMinusKey();
+      break;
+
+    case 's':
+      camY--;
+      break;
+
+    case 'w':
+      camY++;
+      break;
+
+    case 'a':
+      camX++;
+      break;
+
+    case 'd':
+      camX--;
+      break;
+
+    default:
+      break;
+  }
+}
+
 //- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- -//
 
 // Handlers
@@ -76,6 +112,14 @@ function exportButtonIsPressed() {
 
 function importButtonIsPressed(file) {
   // TODO
+}
+
+function handlePlusKey() {
+  if (zoom + zoomStep <= 500) zoom += zoomStep;
+}
+
+function handleMinusKey() {
+  if (zoom - zoomStep > 0) zoom -= zoomStep;
 }
 
 //- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- -//
@@ -106,7 +150,7 @@ class Simulation {
   static generateEntities() {
     let life = [];
     // Only for testing purpose
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < 100; i++) {
       life.push(new Particle({}));
     }
     // life.push(new Particle({ stroke: 5 }));
@@ -146,6 +190,7 @@ class Simulation {
       e.display();
     }
     printLine(`Running: ${this.isRunning}`);
+    printLine(`Zoom: ${zoom}%`);
   }
 
   switchPause() {
@@ -180,6 +225,9 @@ class Particle extends Entity {
     this.vX = typeof velocityX === 'number' ? velocityX : 0;
     this.vY = typeof velocityY === 'number' ? velocityY : 0;
 
+    this.x += 0;
+    this.y += 0;
+
     this.density = typeof density === 'number' ? density : random(1);
     this.stroke = typeof stroke === 'number' ? stroke : random(5, 35);
 
@@ -189,7 +237,7 @@ class Particle extends Entity {
   }
 
   interact(other) {
-    const G = 1;
+    const G = 0.01;
     const dx = other.x - this.x;
     const dy = other.y - this.y;
     const distance = Math.sqrt(dx * dx + dy * dy);
@@ -237,25 +285,25 @@ class Particle extends Entity {
     }
 
     // Out of borders
-    if ((this.x <= 0 && this.vX < 0) || (this.x >= width && this.vX > 0)) {
-      this.vX *= -1;
-    } else if (
-      (this.y <= 0 && this.vY < 0) ||
-      (this.y >= height && this.vY > 0)
-    ) {
-      this.vY *= -1;
-    }
+    // if ((this.x <= 0 && this.vX < 0) || (this.x >= width && this.vX > 0)) {
+    //   this.vX *= -1;
+    // } else if (
+    //   (this.y <= 0 && this.vY < 0) ||
+    //   (this.y >= height && this.vY > 0)
+    // ) {
+    //   this.vY *= -1;
+    // }
 
-    if (this.x < 0) {
-      this.x = 0;
-    } else if (this.x > width) {
-      this.x = width;
-    }
-    if (this.y < 0) {
-      this.y = 0;
-    } else if (this.y > height) {
-      this.y = height;
-    }
+    // if (this.x < 0) {
+    //   this.x = 0;
+    // } else if (this.x > width) {
+    //   this.x = width;
+    // }
+    // if (this.y < 0) {
+    //   this.y = 0;
+    // } else if (this.y > height) {
+    //   this.y = height;
+    // }
 
     //
     // this.vX *= 0.99;
@@ -267,8 +315,22 @@ class Particle extends Entity {
   }
 
   display() {
+    let x = this.x;
+    let y = this.y;
+
+    // x += camX;
+    // y += camY;
+
     stroke(this.color);
-    strokeWeight(this.stroke);
-    point(this.x, this.y);
+    strokeWeight(camZoomTranslation(this.stroke));
+    point(camZoomTranslation(x), camZoomTranslation(y));
   }
+}
+
+function camZoomTranslation(number) {
+  let result = number;
+  if (zoom > 0) {
+    result *= zoom / 100;
+  }
+  return result;
 }
