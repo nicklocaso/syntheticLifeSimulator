@@ -23,7 +23,7 @@ function setup() {
     .style('padding', '10px')
     .mousePressed(pauseButtonIsPressed);
 
-  // createButton('Speed Up')
+  // createButton('SpeedistanceUp')
   //   .style('font-size', '16px')
   //   .style('padding', '10px')
   //   .mousePressed(speedUpButtonIsPressed);
@@ -249,7 +249,7 @@ class Particle extends Entity {
     const otherRadius = other.stroke / 2;
 
     if (distance > 0) {
-      let force = (G * otherArea) / (distance * distance); // F = (G * m1 * m2) / d^2
+      let force = (G * otherArea) / (distance * distance);
       let fx = (force * dx) / distance;
       let fy = (force * dy) / distance;
 
@@ -257,11 +257,23 @@ class Particle extends Entity {
       this.vY += fy;
 
       if (distance < radius + otherRadius) {
-        // Collision
-        if (this.stroke > other.stroke) {
-          this.deltaArea += otherArea;
+        if (distance < Math.abs(radius - otherRadius)) {
+          if (radius > otherRadius) {
+            this.deltaArea += otherArea;
+          } else {
+            this.deltaArea -= otherArea;
+          }
         } else {
-          this.deltaArea -= otherArea;
+          const intersectionArea = calculateIntersectionArea(
+            distance,
+            radius,
+            otherRadius
+          );
+          if (radius > otherRadius) {
+            this.deltaArea += intersectionArea;
+          } else {
+            this.deltaArea -= intersectionArea;
+          }
         }
       }
     }
@@ -333,4 +345,36 @@ function camZoomTranslation(number) {
     result *= zoom / 100;
   }
   return result;
+}
+
+function calculateIntersectionArea(centerDistance, radius1, radius2) {
+  const term1 =
+    radius1 *
+    radius1 *
+    Math.acos(
+      (centerDistance * centerDistance +
+        radius1 * radius1 -
+        radius2 * radius2) /
+        (2 * centerDistance * radius1)
+    );
+  const term2 =
+    radius2 *
+    radius2 *
+    Math.acos(
+      (centerDistance * centerDistance +
+        radius2 * radius2 -
+        radius1 * radius1) /
+        (2 * centerDistance * radius2)
+    );
+  const term3 =
+    0.5 *
+    Math.sqrt(
+      (-centerDistance + radius1 + radius2) *
+        (centerDistance + radius1 - radius2) *
+        (centerDistance - radius1 + radius2) *
+        (centerDistance + radius1 + radius2)
+    );
+
+  const intersectionArea = term1 + term2 - term3;
+  return intersectionArea;
 }
